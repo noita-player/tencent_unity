@@ -1,4 +1,4 @@
-// the header struct was shuffled a bit for CABs, which are deserialized by this in AssetStudio/SerializedFile.cpp
+// the header struct was shuffled a bit for CABs, which are deserialized by this in AssetStudio/SerializedFile.cs
 		public SerializedFile(AssetsManager assetsManager, string fullName, EndianBinaryReader reader)
 		{
 			this.assetsManager = assetsManager;
@@ -21,3 +21,5 @@
 				reader.Position = this.header.m_FileSize - (long)((ulong)this.header.m_MetadataSize);
 				this.m_FileEndianess = (EndianType)reader.ReadByte();
 			}
+
+// also patch IsSerializedFile to always return true, whoops
