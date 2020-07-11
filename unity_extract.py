@@ -137,7 +137,7 @@ x'                       .cXMMMMMMMMMMMMMMMMMMMWWWNNNNXXK0ko:,''........        
 
 # hexdump to number list
 def hex2b(inp):
-    return list(map(lambda v: int(v,16), re.findall("[a-f0-9]{2}", inp)))
+    return list(map(lambda v: int(v,16), re.findall("[a-fA-F0-9]{2}", inp)))
 
 # zuc: https://github.com/Arkq/SM2349/blob/master/src/ZUC.h
 # one of ~6 xorkey derived by ZUC decrypting a static 16 byte constant with a static 16byte key
@@ -556,7 +556,7 @@ def parse_file(parseme):
             idx += block_compressedsz
             pass
             # none
-    data_stream = b"".join(data_raw)
+    data_stream = bytearray(b"".join(data_raw))
 
     # file name "CAB-...." n other bits use key bb8f
     zuc_ins = new_zuc(zuc_key2)
@@ -580,12 +580,42 @@ def parse_file(parseme):
             (file_size, file_flags, name_len, name, file_offset)
         )
 
+        _ = """ yeah so they're pulling this ancient chinese secret here, xorpad SerializedFile header w/ blowfish constants...
+  v5 = v21 ^ 0x2FFD72DB;
+  v6 = v23 ^ 0x98DFB5AC;
+  v21 ^= 0x2FFD72DBu;
+  v7 = v24 ^ 0xD1310BA6;
+  v23 ^= 0x98DFB5AC;                            // BLOWFISH????????????
+  v24 ^= 0xD1310BA6;
+  v8 = v20 ^ 0x43;
+  LOBYTE(v20) = v20 ^ 0x43;
+  BYTE1(v20) ^= 0x4Cu;
+  BYTE2(v20) ^= 0x51u;
+  HIBYTE(v20) ^= 0x54u;
+        """
+        cabkey = hex2b("""
+        43 4c 51 54 db 72 fd 2f 00 00 00 00 ac b5 df 98 a6 0b 31 d1
+        """)
+        for i, (a,b) in enumerate(zip(cabkey, data_stream[0:20])):
+            data_stream[i] = a^b
+
         # write a file for this
         outpath = (parseme.parent) / name.decode("utf-8")
         with open(outpath, "wb") as outf:
             outf.write(data_stream[file_offset:file_offset+file_size])
         print(f"Wrote {outpath}")
+        # parse it as a SerializedFile
+
+        # uint32_t file[]
+        # v5: file[1] ^ 0x2FFD72DB
+        # v6: file[3] ^ 0x98DFB5AC
+        # v7: file[4] ^ 0xD1310bA6
+        # char v8: file[0] ^ 0x43 # first byte onl
+        # 0x43, 0x4c, 0x51, 0x54
+
+
     #IPython.embed()
+
 
 
 if False:
